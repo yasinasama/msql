@@ -5,7 +5,7 @@ from itertools import groupby
 import pymongo
 from bson.objectid import ObjectId
 
-from grammar import parse_handle
+from msql.grammar import parse_handle
 
 
 class Mongo:
@@ -43,7 +43,11 @@ class Mongo:
 
     def _where(self,where):
         _d = {}
+
         if where:
+            while isinstance(where, list) and len(where) == 1:
+                where = where[0]
+            print(where)
             for w in where:
                 _name,_value,_comp = w['name'],w['value'],w['compare']
                 if _comp in ('>','>=','<','<='):
@@ -52,52 +56,37 @@ class Mongo:
                     _d[_name] = _value
         self.result = self.table.find(_d)
             
-    def _make_conds(self,conditions):
-        if not conditions:
-            return {}
+    def _make_conds(self,conditions,conds=None):
+        if not conds:
+            conds = {}
 
-        result = {
-            'bool':{
-                'must':[],
-                'should':[],
-                'must_not':[]
-            }
-        }
         # filter 
         while isinstance(conditions, list) and len(conditions) == 1:
             conditions = conditions[0]
 
         # `AND` has high priority,so we should split `OR` first
+        if isinstance(conditions, list):
+            while len(conditions) == 1:
+                conditions = conditions[0]
+            if 'OR' in conditions:
+                ors = conditions.split
+
         l = ['OR' in conditions,'AND' in conditions]
         if any(l):
             if l[0]:
-                _conn,_bool = 'OR','should'
+                subconds = self.split_list(conditions,'OR')
+                conds['$or'] = subconds
             else:
-                _conn,_bool = 'AND','must'
-            subconds = self.split_list(conditions,_conn)
+                subconds = self.split_list(conditions,'AND')
             for subcond in subconds:
-                result['bool'][_bool].append(make_dsl_where(subcond))
+                conds[].append(self._make_conds(subcond))
         else:
-            left = conditions['left']['name']
-            right = conditions['right']
-            compare = conditions['compare']
-
-            _bool = 'must'
-
-            if compare == 'LIKE':
-                comp_dsl = make_dsl_like(left,right)
-            elif compare == 'IN':
-                comp_dsl = make_dsl_in(left,right)
-            elif compare == '=':
-                comp_dsl = make_dsl_equal(left,right)
-            elif compare in ('<>','!='):
-                _bool = 'must_not'
-                comp_dsl = make_dsl_not_equal(left,right)
-            else:
-                comp_dsl = make_dsl_range(left,right,compare)
-
-            result['bool'][_bool].append(comp_dsl)
-        return result
+            _name, _value, _comp = conditions['name'], conditions['value'], conditions['compare']
+            if _comp in ('>', '>=', '<', '<='):
+                conds[_name] = {self._compare_mapping(_comp): _value}
+            elif _comp == '=':
+                conds[_name] = _value
+        return conds
 
     def _order(self,order):
         _d = []
