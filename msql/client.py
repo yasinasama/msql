@@ -18,6 +18,7 @@ class Mongo:
 
         self.asc = pymongo.ASCENDING
         self.desc = pymongo.DESCENDING
+         
         self.result = None
 
     # def objectid_to_str(self):
@@ -42,58 +43,42 @@ class Mongo:
         self.table = self.db[table]
 
     def _where(self,where):
-        _d = {}
+        d = {}
 
         if where:
-            while isinstance(where, list) and len(where) == 1:
-                where = where[0]
-            print(where)
-            for w in where:
-                _name,_value,_comp = w['name'],w['value'],w['compare']
-                if _comp in ('>','>=','<','<='):
-                    _d[_name] = {self._compare_mapping(_comp):_value}
-                elif _comp == '=':
-                    _d[_name] = _value
-        self.result = self.table.find(_d)
+            d = self._make_condsl(where)
+        self.result = self.table.find(d)
             
-    def _make_conds(self,conditions,conds=None):
-        if not conds:
-            conds = {}
-
+    def _make_condsl(self,conditions):
+        condsl = {}
         # filter 
         while isinstance(conditions, list) and len(conditions) == 1:
             conditions = conditions[0]
 
-        # `AND` has high priority,so we should split `OR` first
         if isinstance(conditions, list):
-            while len(conditions) == 1:
-                conditions = conditions[0]
+            # `AND` has high priority,so we should split `OR` first
             if 'OR' in conditions:
-                ors = conditions.split
-
-        l = ['OR' in conditions,'AND' in conditions]
-        if any(l):
-            if l[0]:
-                subconds = self.split_list(conditions,'OR')
-                conds['$or'] = subconds
+                k,b = '$or','OR'
             else:
-                subconds = self.split_list(conditions,'AND')
-            for subcond in subconds:
-                conds[].append(self._make_conds(subcond))
+                k,b = '$and','AND'
+
+            subconditions = self.split_list(conditions,b)
+            for s in subconditions:
+                condsl.setdefault(k,[]).append(self._make_condsl(s))
         else:
-            _name, _value, _comp = conditions['name'], conditions['value'], conditions['compare']
-            if _comp in ('>', '>=', '<', '<='):
-                conds[_name] = {self._compare_mapping(_comp): _value}
-            elif _comp == '=':
-                conds[_name] = _value
-        return conds
+            name, value, comp = conditions['name'], conditions['value'], conditions['compare']
+            if comp in ('>', '>=', '<', '<='):
+                condsl[name] = {self._compare_mapping(comp): value}
+            elif comp == '=':
+                condsl[name] = value
+        return condsl
 
     def _order(self,order):
-        _d = []
+        d = []
         for o in order:
-            _name,_type = o['name'],o['type']
-            _d.append((_name,self._sort_mapping(_type)))
-        self.reslut = self.result.sort(_d)
+            name,value = o['name'],o['type']
+            d.append((name,self._sort_mapping(value)))
+        self.reslut = self.result.sort(d)
 
     def _limit(self,limit):
         self.reslut = self.result.limit(limit)
@@ -128,12 +113,10 @@ class Mongo:
         return self.result
 
 
+
 if __name__=='__main__':
     mg = Mongo('10.68.120.190',27017,'tt')
-    for i in mg.execute('select * from people where age2>100;'):
+    for i in mg.execute('select * from people where (age=10 and age2=111) or age=20'):
         print(i)
-
-
-
-        
+    # print(len(mg.execute()))    
 
