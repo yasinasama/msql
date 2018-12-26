@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
+import re
 from itertools import groupby
 
 import pymongo
 from bson.objectid import ObjectId
 
-from msql.grammar import parse_handle
+from grammar import parse_handle
 
 
 class Mongo:
@@ -36,7 +37,7 @@ class Mongo:
     def _sort_mapping(self,sort):
         return self.asc if sort=='ASC' else self.desc
 
-    def split_list(self,source,wd):
+    def _split_list(self,source,wd):
         return [list(g) for k, g in groupby(source, lambda x: x == wd) if not k]
 
     def _table(self,table):
@@ -62,15 +63,28 @@ class Mongo:
             else:
                 k,b = '$and','AND'
 
-            subconditions = self.split_list(conditions,b)
-            for s in subconditions:
-                condsl.setdefault(k,[]).append(self._make_condsl(s))
+            subconditions = self._split_list(conditions,b)
+            for sub in subconditions:
+                condsl.setdefault(k,[]).append(self._make_condsl(sub))
         else:
             name, value, comp = conditions['name'], conditions['value'], conditions['compare']
             if comp in ('>', '>=', '<', '<='):
                 condsl[name] = {self._compare_mapping(comp): value}
             elif comp == '=':
                 condsl[name] = value
+            elif comp == 'LIKE':
+                if value.startswith('%'):
+                    value = '/' + value
+                else:
+                    value = '/^' + value
+                if value.endswith('%'):
+                    value += '/'
+                else:
+                    value += '$/'
+                condsl[name] = re.sub(r'(?<!\\)%','',value)
+        print(re.sub(r'(?<!\\)%','',value))
+        print(len(re.sub(r'(?<!\\)%','',value)))
+        print(condsl)
         return condsl
 
     def _order(self,order):
@@ -107,8 +121,8 @@ class Mongo:
             self._order(order)
 
         if limit:
-            self._limit(limit[0])
-            self._skip(limit[1])
+            self._limit(limit[1])
+            self._skip(limit[0])
 
         return self.result
 
@@ -116,7 +130,7 @@ class Mongo:
 
 if __name__=='__main__':
     mg = Mongo('10.68.120.190',27017,'tt')
-    for i in mg.execute('select * from people where (age=10 and age2=111) or age=20'):
+    for i in mg.execute('select * from people where user_id like "%\%%"'):
         print(i)
     # print(len(mg.execute()))    
 
