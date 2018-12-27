@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import re
 from itertools import groupby
 
 import pymongo
 from bson.objectid import ObjectId
 
-from grammar import parse_handle
+from msql.grammar import parse_handle
 
 
 class Mongo:
@@ -33,6 +32,8 @@ class Mongo:
             return '$lt'
         if comp == '<=':
             return '$lte'
+        if comp == '!=':
+            return '$ne'
 
     def _sort_mapping(self,sort):
         return self.asc if sort=='ASC' else self.desc
@@ -68,22 +69,17 @@ class Mongo:
                 condsl.setdefault(k,[]).append(self._make_condsl(sub))
         else:
             name, value, comp = conditions['name'], conditions['value'], conditions['compare']
-            if comp in ('>', '>=', '<', '<='):
+            if comp in ('>', '>=', '<', '<=','!='):
                 condsl[name] = {self._compare_mapping(comp): value}
             elif comp == '=':
                 condsl[name] = value
             elif comp == 'LIKE':
-                if value.startswith('%'):
-                    value = '/' + value
-                else:
-                    value = '/^' + value
-                if value.endswith('%'):
-                    value += '/'
-                else:
-                    value += '$/'
-                condsl[name] = re.sub(r'(?<!\\)%','',value)
-        print(re.sub(r'(?<!\\)%','',value))
-        print(len(re.sub(r'(?<!\\)%','',value)))
+                if not value.startswith('%'):
+                    value = '^' + value
+                if not value.endswith('%'):
+                    value += '$'
+                regex = value.strip('%').replace('%','*')
+                condsl[name] = {'$regex':regex}
         print(condsl)
         return condsl
 
