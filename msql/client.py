@@ -5,7 +5,7 @@ from itertools import groupby
 import pymongo
 from bson.objectid import ObjectId
 
-from msql.grammar import parse_handle
+from .grammar import parse_handle
 
 
 class Mongo:
@@ -41,15 +41,33 @@ class Mongo:
     def _split_list(self,source,wd):
         return [list(g) for k, g in groupby(source, lambda x: x == wd) if not k]
 
+
+    def _columns(self,columns):
+        c = {}
+        need_id = False
+        for column in columns:
+            n = column['name']
+            if n == '*':
+                c = {}
+                break
+            if n == 'id':
+                need_id = True
+            else:
+                c[n] = 1
+        if not need_id:
+            c['_id'] = 0
+        return c
+
     def _table(self,table):
         self.table = self.db[table]
 
-    def _where(self,where):
+    def _where(self,where,column):
         d = {}
 
         if where:
             d = self._make_condsl(where)
-        self.result = self.table.find(d)
+        c = self._columns(column)
+        self.result = self.table.find(d,c)
             
     def _make_condsl(self,conditions):
         condsl = {}
@@ -96,6 +114,9 @@ class Mongo:
     def _skip(self,skip):
         self.reslut = self.result.skip(skip)
 
+    def _map(self):
+        pass
+
     def execute(self,sql):
         sql = sql.strip(';')+';'
         try:
@@ -106,12 +127,13 @@ class Mongo:
 
         table = dsl['table'][0]['name']
         where = dsl['where']
+        column = dsl['column']
         order = dsl['order']
         limit = dsl['limit']
 
         self._table(table)
-        
-        self._where(where)
+
+        self._where(where,column)
 
         if order:
             self._order(order)

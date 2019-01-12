@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from msql.exceptions import LexerException
+from .exceptions import LexerException
 
 reserved = {
     'select': 'SELECT',
