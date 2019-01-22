@@ -146,9 +146,4 @@ class Mongo:
 
 
 
-if __name__=='__main__':
-    mg = Mongo('10.68.120.190',27017,'tt')
-    for i in mg.execute('select * from people where user_id like "%\%%"'):
-        print(i)
-    # print(len(mg.execute()))    
 
