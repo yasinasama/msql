@@ -1,7 +1,7 @@
 import pymongo
 
 class Sort:
-    def __init__(self,order):
+    def __init__(self,order=None):
         self.order = order
 
         self.m = {
@@ -10,6 +10,9 @@ class Sort:
         }
 
     def sort(self):
+        if not self.order:
+            return None
+
         d = []
         for o in self.order:
             name,value = o['name'],o['type']

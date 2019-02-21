@@ -12,28 +12,27 @@ class Find:
         '!=': '$ne'
     }
 
-    def __init__(self,columns,conditions):
+    def __init__(self,columns,conditions=None):
         self.columns = columns
         self.conditions = conditions
 
-        self.m = dict()
-        self.n = dict()
-
     def _select(self):
+        n = {}
+
         _id = False
         for column in self.columns:
             name = column.get('name')
             if name == '*':
-                self.n.clear()
-                break
+                return None
             if name.lower() in ['id','_id']:
                 _id = True
                 continue
-            self.n[name] = 1
+            n[name] = 1
 
         if not _id:
-            self.n['_id'] = 0
-
+            n['_id'] = 0
+        print(n)
+        return n
 
     def _filter(self,conditions):
         m = {}
@@ -71,6 +70,43 @@ class Find:
         return [list(g) for k, g in groupby(source, lambda x: x == wd) if not k]
 
     def find(self):
-        return self._filter(self.conditions),self._select()
+        _m = self._filter(self.conditions) if self.conditions else None
+        _n = self._select()
+        return _m,_n
+
+
+class Columns:
+    def __init__(self,columns):
+        self.__columns = []
+        self.__functions = []
+        self.__id = False
+        self.__star = False
+
+        for column in columns:
+            name = column.get('name')
+            if isinstance(name,dict):
+                self.__functions.append(list(name.items()))
+            else:
+                if name == '*':
+                    self.__star = True
+                if name.lower() == 'id':
+                    self.__id = True
+                self.__columns.append(name)
+
+    def has_star(self):
+        return self.__star
+
+    def has_id(self):
+        return self.__id
+
+    @property
+    def columns(self):
+        return self.__columns
+
+    @property
+    def functions(self):
+        return self.__functions
+
+
 
 

@@ -30,21 +30,18 @@ class Mongo:
         order = dsl['order']
         limit = dsl['limit']
 
-        res = self.db[table]
-        if where:
-            res = res.find(*Find(column,where).find())
+        result = self.db[table]
+        pwhere,pcolumn = Find(column,where).find()
+        psort = Sort(order).sort()
+        pskip,plimit = Limit(limit).limit()
 
-        if order:
-            res = res.sort(Sort(order).sort())
-
-        if limit:
-            s,l = Limit(limit).limit()
-            if s:
-                res = res.limit(l)
-            if l:
-                res = res.skip(s)
-
-        return res
+        return result.find(
+            filter=pwhere,
+            projection=pcolumn,
+            sort=psort,
+            skip=pskip,
+            limit=plimit
+        )
 
 
 

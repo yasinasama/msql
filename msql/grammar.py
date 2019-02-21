@@ -120,11 +120,12 @@ def p_limit(p):
     """ limit : LIMIT numbers
               | empty
     """
-    p[0] = []
+    p[0] = [0,0]
     if len(p) > 2:
         if len(p[2]) == 1:
-            p[2] = [0] + p[2]
-        p[0] = p[2]
+            p[0][1] = p[2][0]
+        else:
+            p[0] = p[2]
 
 def p_order(p):
     """ order : order COMMA order
