@@ -3,7 +3,8 @@
 import pymongo
 
 from .grammar import parse_handle
-from .find import Find
+from .columns import Columns
+from .where import Where
 from .limit import Limit
 from .sort import Sort
 
@@ -31,9 +32,12 @@ class Mongo:
         limit = dsl['limit']
 
         result = self.db[table]
-        pwhere,pcolumn = Find(column,where).find()
+
+        pcolumn = Columns(column).dsl()
+        pwhere = Where(where).find()
         psort = Sort(order).sort()
         pskip,plimit = Limit(limit).limit()
+
 
         return result.find(
             filter=pwhere,
